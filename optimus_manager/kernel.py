@@ -50,8 +50,33 @@ def _setup_nvidia_mode(config):
 
 def _setup_hybrid_mode(config):
 
-    _set_base_state(config)
-    _load_nvidia_modules(config)
+    #_set_base_state(config)
+    #_load_nvidia_modules(config)
+    _setup_hybrid_mode_dpm(config)
+
+def _setup_hybrid_mode_dpm(config):
+
+    _unload_nvidia_modules()
+    _unload_nouveau()
+
+    pci.set_power_state("auto")
+
+    if config["optimus"]["pci_reset"] == "yes":
+        pci.reset_nvidia()
+
+    print("Loading Nvidia modules")
+
+    pat_value = _get_PAT_parameter_value(config)
+    modeset_value = 1 if config["nvidia"]["modeset"] == "yes" else 0
+
+    try:
+        exec_bash("modprobe nvidia NVreg_DynamicPowerManagement=0x02 NVreg_UsePageAttributeTable=%d" % pat_value)
+        exec_bash("modprobe nvidia_drm modeset=%d" % modeset_value)
+
+    except BashError as e:
+        raise KernelSetupError("Cannot load Nvidia modules : %s" % str(e))
+
+
 
 def _set_base_state(config):
 
